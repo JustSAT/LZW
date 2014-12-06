@@ -29,7 +29,7 @@ namespace LZW
             OpenFileDialog openFileDialog1 = new OpenFileDialog();
 
             openFileDialog1.InitialDirectory = "c:\\";
-            openFileDialog1.Filter = "gif files (*.gif)|*.gif";
+            openFileDialog1.Filter = "all files (*.*)|*.*";
             openFileDialog1.FilterIndex = 2;
             openFileDialog1.RestoreDirectory = true;
 
@@ -62,21 +62,21 @@ namespace LZW
             StreamWriter outStream = new StreamWriter("C:/out.txt");
             imageBytes = imageToByteArray(openedImage);
             table = new int[openedImage.Width * openedImage.Height];
-            for (int i = 0; i < openedImage.Width * openedImage.Height; i++)
+            for (int i = 0; i < imageBytes.Length; i++)
             {
-                if (i <= 255)
-                    table[i] = i;
-                else
-                    table[i] = -1;
+                table[i] = -1;
             }
-            
+            for (int i = 0; i < imageBytes.Length; i++)
+            {
+                table[imageBytes[i]] = imageBytes[i];
+            }
 
             int curByte = imageBytes[0];
             string str = "" + (char)imageBytes[0];
             int id = 0;
             for (int i = 1; i < imageBytes.Length; i++)
             {
-                char ch = (char)imageBytes[i];
+                byte ch = imageBytes[i];
                 id = 0;
                 for (int j = 0; j < str.Length; j++)
                 {
