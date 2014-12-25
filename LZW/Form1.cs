@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -12,9 +12,11 @@ namespace LZW
 {
     public partial class Form1 : Form
     {
-        public Bitmap openedImage = null;
+        public Image openedImage = null;
         public byte[] imageBytes = null;
-        private int[] table;
+        public byte[] newImageBytes = null;
+
+        //Массив из индексов и строк
 
         private Stream openedCompressed = null;
         private string filePath = "";
@@ -41,7 +43,7 @@ namespace LZW
                     {
                         using (myStream)
                         {
-                            openedImage = new Bitmap(Image.FromStream(myStream));
+                            openedImage = Image.FromStream(myStream);
                         }
                     }
                 }
@@ -50,71 +52,57 @@ namespace LZW
                     MessageBox.Show("Error: Could not read file from disk. Original error: " + ex.Message);
                 }
             }
+            
         }
 
         private void compress_Click(object sender, EventArgs e)
         {
-            MakeTable();
-        }
-
-        private void MakeTable()
-        {
-            StreamWriter outStream = new StreamWriter("C:/out.txt");
+            File.Delete("c:/out.txt");
             imageBytes = imageToByteArray(openedImage);
-            table = new int[openedImage.Width * openedImage.Height];
+            string inputLine = "";
+            StreamWriter writer = new StreamWriter("c:/array.txt");
             for (int i = 0; i < imageBytes.Length; i++)
             {
-                table[i] = -1;
-            }
-            for (int i = 0; i < imageBytes.Length; i++)
-            {
-                table[imageBytes[i]] = imageBytes[i];
+                //inputLine += (char)imageBytes[i];
+                writer.Write((char)imageBytes[i]);
             }
 
-            int curByte = imageBytes[0];
-            string str = "" + (char)imageBytes[0];
-            int id = 0;
-            for (int i = 1; i < imageBytes.Length; i++)
-            {
-                byte ch = imageBytes[i];
-                id = 0;
-                for (int j = 0; j < str.Length; j++)
-                {
-                    id += str[j];
-                }
-                id += ch;
-                if (table[id] != -1)
-                {
-                    str += ch;
-                }
-                else
-                {
-                    //out
-                    outStream.Write(str);
-                    table[id] = id + ch;
-                    str = "" + ch;
-                }
-            }
-            //out
-            outStream.Write(str);
-            outStream.Close();
+            MessageBox.Show("Start\n" + "Length: " + imageBytes.Length);
+            writer.Close();
+
+            inputLine = File.ReadAllText("c:/array.txt");
+            //File.Delete("c:/array.txt");
+
+            LZWAlgorithm lzw = new LZWAlgorithm();
+            writer = new StreamWriter("c:/out.txt", true, Encoding.Default);
             
-        }
+            writer.Write(lzw.Compress(inputLine));
+            MessageBox.Show("Compressing Done!");
+            File.Delete("c:/array.txt");
+            writer.Close();
 
+        }
+        public static byte[] converterDemo(Image img)
+        {
+            ImageConverter converter = new ImageConverter();
+            return (byte[])converter.ConvertTo(img, typeof(byte[]));
+        }
         public byte[] imageToByteArray(System.Drawing.Image imageIn)
         {
             MemoryStream ms = new MemoryStream();
-            imageIn.Save(ms, System.Drawing.Imaging.ImageFormat.Gif);
+
+            imageIn.Save(ms, imageIn.RawFormat);
             return ms.ToArray();
         }
 
-        public Image byteArrayToImage(byte[] byteArrayIn)
+        public Image byteArrayToImage(byte[] fileBytes)
         {
-            MemoryStream ms = new MemoryStream(byteArrayIn);
-            Image returnImage = Image.FromStream(ms);
-            return returnImage;
+            using (MemoryStream fileStream = new MemoryStream(fileBytes))
+            {
+                return Image.FromStream(fileStream);
+            }
         }
-        
+
         private void openCopressed_Click(object sender, EventArgs e)
         {
             Stream myStream = null;
@@ -147,16 +135,20 @@ namespace LZW
 
         private void decompress_Click(object sender, EventArgs e)
         {
-            string[] lines = File.ReadAllLines(filePath);
-            StreamWriter write = new StreamWriter("c:/test.txt");
-            for (int i = 0; i < lines.Length; i++)
+            LZWAlgorithm lzw = new LZWAlgorithm();
+            string input = File.ReadAllText(filePath);
+            newImageBytes = new byte[input.Length];
+            input = lzw.Decompress(input);
+            for (int i = 0; i < input.Length; i++)
             {
-                if(i != lines.Length-1)
-                write.WriteLine(lines[i]);
-                else
-                    write.Write(lines[i]);
+                newImageBytes[i] = (byte)input[i];
             }
-            write.Close();
+            //File.WriteAllText("c:/test.txt", input);
+            MessageBox.Show(newImageBytes.Length.ToString());
+            Image result = byteArrayToImage(newImageBytes);
+            result.Save("c:/result");
+            MessageBox.Show("Decompressing Done!");
         }
+        
     }
 }
